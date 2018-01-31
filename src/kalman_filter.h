@@ -1,6 +1,7 @@
 #ifndef KALMAN_FILTER_H_
 #define KALMAN_FILTER_H_
 #include "Eigen/Dense"
+#include <cmath>
 
 class KalmanFilter {
 public:
@@ -58,6 +59,11 @@ public:
    */
   void Update(const Eigen::VectorXd &z);
 
+  /**
+   * Radar measurement function h(x)
+   * @param z The measurement at k+1
+   */
+  Eigen::MatrixXd h_radar(void);
   /**
    * Updates the state by using Extended Kalman Filter equations
    * @param z The measurement at k+1
