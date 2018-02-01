@@ -1,5 +1,7 @@
 #include "kalman_filter.h"
+#include <iostream>
 
+using namespace std;
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
 
@@ -63,7 +65,8 @@ MatrixXd KalmanFilter::h_radar(void) {
   vx = x_(2);
   vy = x_(3);
   z_pred(0) = sqrt(px*px + py*py);
-  z_pred(1) = atan(py / px);
+  z_pred(1) = fmod(atan2(py, px), M_PI);
+  cout << "angle: " << z_pred(1) << endl;
   z_pred(2) = (px*vx + py*vy) / sqrt(z_pred(0));
   return z_pred;
 }
