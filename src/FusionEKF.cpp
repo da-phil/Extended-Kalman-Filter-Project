@@ -166,8 +166,14 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
 
     if (measurement_pack.sensor_type_ == MeasurementPackage::RADAR) {
       cout << "Radar measurement received!" << endl;
-      // H has to be the jacobian
-      ekf_.H_ = tools.CalculateJacobian(ekf_.x_);
+      Hj_ = tools.CalculateJacobian(ekf_.x_);
+      // don't update measurement if we can't compute the jacobian
+      if (Hj_.isZero(0)){
+        cerr << "Hj is zero" << endl;
+        return;
+      }
+      // set H_ to Hj when updating with a radar measurement
+      ekf_.H_ = Hj_;
       ekf_.R_ = R_radar_;
       // Radar updates (non-linear model, needs linearization, hence call to UpdateEKF)
       ekf_.UpdateEKF(measurement_pack.raw_measurements_);
@@ -179,6 +185,7 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
       ekf_.Update(measurement_pack.raw_measurements_);
     }
   }
+
   // print the output
   std::string sep = "\n----------------------------------------\n";
   Eigen::IOFormat CleanFmt(cout.precision(3), 0, ", ", "\n", "  [", "]");
