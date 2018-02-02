@@ -46,8 +46,6 @@ FusionEKF::FusionEKF() {
   //measurement matricies
   H_laser_ << 1,    0,    0,    0,
               0,    1,    0,    0;
-  Hj_ = MatrixXd::Zero(3, 4);
-  
 
   //state covariance matrix P
   P_ << 1,    0,    0,      0,
@@ -89,6 +87,7 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
       /**
       Convert radar from polar to cartesian coordinates and initialize state.
       */
+      cout << "Initial radar measurement received!" << endl;
       float rho = measurement_pack.raw_measurements_[0];
       float phi = measurement_pack.raw_measurements_[1];
       float rhodot = measurement_pack.raw_measurements_[2];
@@ -103,6 +102,7 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
       /**
       Initialize state.
       */
+      cout << "Initial lidar measurement received!" << endl;
       float px, py, vx, vy;
       px = measurement_pack.raw_measurements_[0];
       py = measurement_pack.raw_measurements_[1];
@@ -113,74 +113,72 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
 
     // done initializing, no need to predict or update
     is_initialized_ = true;
-    return;
-  }
 
-  timestep_++;
-
-  /*****************************************************************************
-   *  Prediction
-   ****************************************************************************/
-
-  /**
-   TODO:
-     * Update the state transition matrix F according to the new elapsed time.
-      - Time is measured in seconds.
-     * Update the process noise covariance matrix.
-     * Use noise_ax = 9 and noise_ay = 9 for your Q matrix.
-   */
-  
-  //compute the time elapsed between the current and previous measurements
-  dt = (measurement_pack.timestamp_ - previous_timestamp_) / 1000000.0; //dt - expressed in seconds
-  previous_timestamp_ = measurement_pack.timestamp_;
-  
-  //1. Modify the F matrix so that the time is integrated
-  // kf_.F_ <<  1, 0, dt, 0,
-  //            0, 1, 0,  dt,
-  //            0, 0, 1,  0,
-  //            0, 0, 0,  1;
-  ekf_.F_(0, 2) = dt;
-  ekf_.F_(1, 3) = dt;
-
-  //2. Set the process noise covariance matrix Q
-  float dt_2 = dt * dt;
-  float dt_3 = dt_2 * dt;
-  float dt_4 = dt_3 * dt;
-  ekf_.Q_ <<  dt_4/4*noise_ax, 0,               dt_3/2*noise_ax,  0,
-              0,               dt_4/4*noise_ay, 0,                dt_3/2*noise_ay,
-              dt_3/2*noise_ax, 0,               dt_2*noise_ax,    0,
-              0,               dt_3/2*noise_ay, 0,                dt_2*noise_ay;
-
-  ekf_.Predict();
-
-  Hj_ = tools.CalculateJacobian(ekf_.x_);
-
-  /*****************************************************************************
-   *  Update
-   ****************************************************************************/
-
-  /**
-   TODO:
-     * Use the sensor type to perform the update step.
-     * Update the state and covariance matrices.
-   */
-  cout << "Timestep " << timestep_ << " - ";
-
-  if (measurement_pack.sensor_type_ == MeasurementPackage::RADAR) {
-    // H has to be the jacobian
-    cout << "Radar measurement received!" << endl;
-    ekf_.H_ = Hj_;
-    ekf_.R_ = R_radar_;
-    // Radar updates (non-linear model, needs linearization, hence call to UpdateEKF)
-    ekf_.UpdateEKF(measurement_pack.raw_measurements_);
   } else {
-    cout << "Lidar measurement received!" << endl;
-    ekf_.H_ = H_laser_;
-    ekf_.R_ = R_laser_;
-    // Laser updates (linear model)
-    ekf_.Update(measurement_pack.raw_measurements_);
-  }
 
+    timestep_++;
+
+    /*****************************************************************************
+     *  Prediction
+     ****************************************************************************/
+
+    /**
+     TODO:
+       * Update the state transition matrix F according to the new elapsed time.
+        - Time is measured in seconds.
+       * Update the process noise covariance matrix.
+       * Use noise_ax = 9 and noise_ay = 9 for your Q matrix.
+     */
+    
+    //compute the time elapsed between the current and previous measurements
+    dt = (measurement_pack.timestamp_ - previous_timestamp_) / 1000000.0; //dt - expressed in seconds
+    previous_timestamp_ = measurement_pack.timestamp_;
+    
+    //1. Modify the F matrix so that the time is integrated
+    // kf_.F_ <<  1, 0, dt, 0,
+    //            0, 1, 0,  dt,
+    //            0, 0, 1,  0,
+    //            0, 0, 0,  1;
+    ekf_.F_(0, 2) = dt;
+    ekf_.F_(1, 3) = dt;
+
+    //2. Set the process noise covariance matrix Q
+    float dt_2 = dt * dt;
+    float dt_3 = dt_2 * dt;
+    float dt_4 = dt_3 * dt;
+    ekf_.Q_ <<  dt_4/4*noise_ax, 0,               dt_3/2*noise_ax,  0,
+                0,               dt_4/4*noise_ay, 0,                dt_3/2*noise_ay,
+                dt_3/2*noise_ax, 0,               dt_2*noise_ax,    0,
+                0,               dt_3/2*noise_ay, 0,                dt_2*noise_ay;
+
+    ekf_.Predict();
+
+    /*****************************************************************************
+     *  Update
+     ****************************************************************************/
+
+    /**
+     TODO:
+       * Use the sensor type to perform the update step.
+       * Update the state and covariance matrices.
+     */
+    cout << "Timestep " << timestep_ << " - dt: " << dt << " - ";
+
+    if (measurement_pack.sensor_type_ == MeasurementPackage::RADAR) {
+      cout << "Radar measurement received!" << endl;
+      // H has to be the jacobian
+      ekf_.H_ = tools.CalculateJacobian(ekf_.x_);
+      ekf_.R_ = R_radar_;
+      // Radar updates (non-linear model, needs linearization, hence call to UpdateEKF)
+      ekf_.UpdateEKF(measurement_pack.raw_measurements_);
+    } else {
+      cout << "Lidar measurement received!" << endl;
+      ekf_.H_ = H_laser_;
+      ekf_.R_ = R_laser_;
+      // Laser updates (linear model)
+      ekf_.Update(measurement_pack.raw_measurements_);
+    }
+  }
   // print the output
   std::string sep = "\n----------------------------------------\n";
   Eigen::IOFormat CleanFmt(cout.precision(3), 0, ", ", "\n", "  [", "]");
