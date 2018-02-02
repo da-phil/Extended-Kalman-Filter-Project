@@ -79,6 +79,10 @@ void KalmanFilter::UpdateEKF(const VectorXd &z) {
     * update the state by using Extended Kalman Filter equations
   */
   VectorXd y = z - h_radar();
+  if (y(1) > M_PI)
+    y(1) -= 2*M_PI;
+  if (y(1) < -M_PI)
+    y(1) += 2*M_PI;
   MatrixXd Ht = H_.transpose();
   MatrixXd S = H_ * P_ * Ht + R_;
   MatrixXd Si = S.inverse();
