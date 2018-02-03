@@ -65,6 +65,11 @@ MatrixXd KalmanFilter::h_radar(void) {
   vx = x_(2);
   vy = x_(3);
   z_pred(0) = sqrt(px*px + py*py);
+  if (fabs(px) <= std::numeric_limits<float>::epsilon())
+    px = std::numeric_limits<float>::epsilon();
+  if (fabs(py) <= std::numeric_limits<float>::epsilon())
+    py = std::numeric_limits<float>::epsilon();
+
   z_pred(1) = atan2(py, px);
   cout << "p = " << px << ", " << py << endl;
   cout << "angle: " << z_pred(1) << "rad, " << (z_pred(1) * 180.0 / M_PI) << "degree" << endl;
